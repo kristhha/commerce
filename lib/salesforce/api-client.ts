@@ -1,54 +1,53 @@
 // lib/salesforce/api-client.ts
 const SALESFORCE_API_BASE_URL = process.env.SALESFORCE_API_BASE_URL;
-const SALESFORCE_CONSUMER_KEY = process.env.SALESFORCE_CONSUMER_KEY;
-const SALESFORCE_CONSUMER_SECRET = process.env.SALESFORCE_CONSUMER_SECRET;
-
-// Example -  This is a simplified example. Real OAuth 2.0 flow is more complex
-async function getSalesforceAccessToken(): Promise<string> {
-    // **Implement OAuth 2.0 flow here to get access token from Salesforce**
-    // ... (Use Salesforce API documentation for OAuth 2.0 details)
-    // For simplicity, this is just a placeholder:
-    console.log("Simulating getting Salesforce Access Token");
-    return "YOUR_SALESFORCE_ACCESS_TOKEN"; // Replace with actual token retrieval
-}
+const SALESFORCE_ACCESS_TOKEN = process.env.SALESFORCE_ACCESS_TOKEN;
 
 export async function salesforceFetch<T>({
-    endpoint,
-    method = 'GET',
-    headers = {},
-    body,
+  endpoint,
+  method = 'GET',
+  headers = {},
+  body,
+  baseURL = process.env.SALESFORCE_API_BASE_URL,
+  accessToken = process.env.BUYER_SESSION_ID
 }: {
-    endpoint: string;
-    method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
-    headers?: HeadersInit;
-    body?: any;
+  endpoint: string;
+  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  headers?: HeadersInit;
+  body?: any;
+  baseURL?: string;
+  accessToken?: string;
 }): Promise<{ status: number; body: T }> {
-    const accessToken = await getSalesforceAccessToken(); // Get your access token
+  if (!accessToken) {
+    throw new Error(
+      'SALESFORCE_ACCESS_TOKEN (BUYER_SESSION_ID) is not set.  Cannot make API requests.'
+    );
+  }
+  if (!baseURL) {
+    throw new Error('SALESFORCE_API_BASE_URL is not set.  Cannot make API requests.');
+  }
 
-    const defaultHeaders = {
-        'Authorization': `Bearer ${accessToken}`, // Include access token
-        'Content-Type': 'application/json',
-        ...headers,
-    };
+  const fullURL = `${baseURL}${endpoint}`; // Construct the full URL
 
-    try {
-        const response = await fetch(`${SALESFORCE_API_BASE_URL}${endpoint}`, {
-            method,
-            headers: defaultHeaders,
-            ...(body ? { body: JSON.stringify(body) } : {}),
-        });
+  const defaultHeaders = {
+    Authorization: `Bearer ${accessToken}`,
+    'Content-Type': 'application/json',
+    ...headers // Allow overriding default headers
+  };
 
-        const responseBody = await response.json() as T; // Type assertion based on expected response
+  const response = await fetch(fullURL, {
+    method,
+    headers: defaultHeaders,
+    body: body ? JSON.stringify(body) : undefined // Stringify body for POST/PATCH
+  });
 
-        if (!response.ok) {
-            console.error("Salesforce API Error:", response.status, responseBody);
-            throw new Error(`Salesforce API Error: ${response.status} - ${JSON.stringify(responseBody)}`);
-        }
+  const responseBody = await response.json();
 
-        return { status: response.status, body: responseBody };
+  if (!response.ok) {
+    // Throw a more informative error, including the response body
+    throw new Error(
+      `Salesforce API Error: ${response.status} - ${response.statusText} - ${JSON.stringify(responseBody)}`
+    );
+  }
 
-    } catch (error) {
-        console.error("Error during Salesforce API call:", error);
-        throw error; // Re-throw to be handled by calling function
-    }
+  return { status: response.status, body: responseBody };
 }
