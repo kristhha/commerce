@@ -1,5 +1,4 @@
 import { Carousel } from 'components/carousel';
-import { ThreeItemGrid } from 'components/grid/three-items';
 import Footer from 'components/layout/footer';
 import { getProductsFromSalesforce } from 'lib/salesforce/queries';
 
@@ -26,7 +25,7 @@ export default async function HomePage() {
         {buyerSessionId && <p>Buyer Session ID: {buyerSessionId}</p>}
         <button onClick={() => getProduct}>Get Product with Buyer Session</button>
       </div> */}
-      <ThreeItemGrid />
+      {/* <ThreeItemGrid /> */}
       <pre className="m-4 max-h-[500px] overflow-auto bg-gray-100 p-4">
         {JSON.stringify(products, null, 2)}
       </pre>
